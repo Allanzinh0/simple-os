@@ -6,6 +6,7 @@ C_SOURCES = $(wildcard src/kernel/*.c src/drivers/*.c src/cpu/*.c src/libc/*.c)
 HEADERS = $(wildcard src/kernel/*.h src/drivers/*.h src/cpu/*.h src/libc/*.h)
 OBJ = $(patsubst src/%.c,obj/%.o,$(C_SOURCES))
 OBJ += obj/cpu/interrupt.o
+BUILD_FOLDERS := obj/kernel obj/drivers obj/cpu obj/libc obj/boot dist/boot
 
 # Change tgus if your cross-compiler is somewhere else
 CC = gcc
@@ -40,15 +41,17 @@ debug: dist/os-image.bin dist/kernel.elf
 	${GDB} -ex "target remote localhost:1234" -ex "symbol-file dist/kernel.elf"
 	
 # Generic rules for wildcards
-obj/%.o: src/%.c ${HEADERS}
+obj/%.o: src/%.c ${BUILD_FOLDERS} ${HEADERS}
 	${CC} ${CFLAGS} -ffreestanding -c $< -o $@
 
-obj/%.o: src/%.asm
+obj/%.o: src/%.asm | ${BUILD_FOLDERS}
 	nasm $< -f elf -o $@
 
-dist/%.bin: src/%.asm
+dist/%.bin: src/%.asm | ${BUILD_FOLDERS}
 	nasm $< -f bin -o $@
 
+$(BUILD_FOLDERS):
+	mkdir -p $@
+
 clean:
-	rm -rf **/*.bin **/*.o dist/os-image.bin **/*.elf 
-	rm -rf */**/*.bin */**/*.o */**/*.elf
+	rm -rf *.bin *.o *.elf dist obj
